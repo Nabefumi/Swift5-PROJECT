@@ -28,10 +28,27 @@ class HomeController: UIViewController {
         super.viewDidLoad()
         
         configureUI()
+        configureCards()
         
     }
     
     // MARK: - Helpers
+    
+    func configureCards() {
+
+        let user1 = User(name: "Jone Doe", age: 22, images: [#imageLiteral(resourceName: "lady4c"), #imageLiteral(resourceName: "jane2")])
+        let user2 = User(name: "Megan", age: 21, images: [#imageLiteral(resourceName: "lady5c"), #imageLiteral(resourceName: "kelly1")])
+        
+        let cardView1 = CardView(viewModel: CardViewModel(user: user1))
+        let cardView2 = CardView(viewModel: CardViewModel(user: user2))
+
+        
+        deckView.addSubview(cardView1)
+        deckView.addSubview(cardView2)
+        
+        cardView1.fillSuperview()
+        cardView2.fillSuperview()
+    }
     
     func configureUI() {
         view.backgroundColor = .white
