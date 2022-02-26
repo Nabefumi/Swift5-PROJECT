@@ -9,14 +9,22 @@ import UIKit
 
 private let reuseIdentifier = "ProfileCell"
 
+protocol ProfileControllerDelegate: class {
+    func profileController(_ controller: ProfileController, didLikeUser user: User)
+    func profileController(_ controller: ProfileController, didDislikeUser user: User)
+
+}
+
 class ProfileController: UIViewController {
-    
-    // MARK: - Properties
+    //MARK: - Properties
     
     private let user: User
+    weak var delegate: ProfileControllerDelegate?
     
     private lazy var viewModel = ProfileViewModel(user: user)
     private lazy var barStackView = SegmentedBarView(numberOfSegments: viewModel.imageURLs.count)
+    // lazy var because we are trying to access "user" property on a class level
+    // user can only be used once it's only available
     
     private lazy var collectionView: UICollectionView = {
         let frame = CGRect(x: 0, y: 0, width: view.frame.width, height: view.frame.width + 100)
@@ -36,12 +44,13 @@ class ProfileController: UIViewController {
         let blur = UIBlurEffect(style: .regular)
         let view = UIVisualEffectView(effect: blur)
         return view
+        
     }()
     
     private let dismissButton: UIButton = {
         let button = UIButton(type: .system)
         button.setImage(#imageLiteral(resourceName: "dismiss_down_arrow").withRenderingMode(.alwaysOriginal), for: .normal)
-        button.addTarget(self, action: #selector(handleDismissal), for: .touchUpInside)
+        button.addTarget(self, action: #selector(handleDimissal), for: .touchUpInside)
         return button
     }()
     
@@ -58,11 +67,12 @@ class ProfileController: UIViewController {
         return label
     }()
     
+    
     private let bioLabel: UILabel = {
         let label = UILabel()
         label.numberOfLines = 0
         label.font = UIFont.systemFont(ofSize: 20)
-        label.text = "I was in animal"
+        label.text = "I was in transformers"
         return label
     }()
     
@@ -84,7 +94,8 @@ class ProfileController: UIViewController {
         return button
     }()
     
-    // MARK - Lifecycle
+    
+    //MARK: - Lifecycle
     
     init(user: User) {
         self.user = user
@@ -92,7 +103,7 @@ class ProfileController: UIViewController {
     }
     
     required init?(coder: NSCoder) {
-        fatalError("init(coder) has not been implement")
+        fatalError("init(coder:) has not been implemented")
     }
     
     override func viewDidLoad() {
@@ -101,10 +112,14 @@ class ProfileController: UIViewController {
         loadUserData()
     }
     
-    // MARK: - Actions
+    //MARK: - Selectors
+    
+    @objc func handleDimissal() {
+        dismiss(animated: true, completion: nil)
+    }
     
     @objc func handleDislike() {
-        
+        delegate?.profileController(self, didDislikeUser: user)
     }
     
     @objc func handleSuperlike() {
@@ -112,30 +127,18 @@ class ProfileController: UIViewController {
     }
     
     @objc func handleLike() {
-        
-    }
-
-    @objc func handleDismissal() {
-        dismiss(animated: true, completion: nil)
+        delegate?.profileController(self, didLikeUser: user)
     }
     
-    // MARK: - Helpers
-    
-    func loadUserData() {
-        infoLabel.attributedText = viewModel.userDetailsAttributedString
-        professionLabel.text = viewModel.profession
-        bioLabel.text = viewModel.bio
-    }
+    //MARK: - Helpers
     
     func configureUI() {
         view.backgroundColor = .white
         
         view.addSubview(collectionView)
-        
         view.addSubview(dismissButton)
         dismissButton.setDimensions(height: 40, width: 40)
-        dismissButton.anchor(top: collectionView.bottomAnchor, right: view.rightAnchor,
-                             paddingTop: -20, paddingRight: 16)
+        dismissButton.anchor(top: collectionView.bottomAnchor, right: view.rightAnchor, paddingTop: -20, paddingRight: 16)
         
         let infoStack = UIStackView(arrangedSubviews: [infoLabel, professionLabel, bioLabel])
         infoStack.axis = .vertical
@@ -143,23 +146,24 @@ class ProfileController: UIViewController {
         
         view.addSubview(infoStack)
         infoStack.anchor(top: collectionView.bottomAnchor, left: view.leftAnchor,
-                         right: view.rightAnchor, paddingTop: 12, paddingLeft: 12, paddingRight: 12)
+                         right: view.rightAnchor, paddingTop: 12, paddingLeft: 12,
+                         paddingRight: 12)
         
         view.addSubview(blurView)
         blurView.anchor(top: view.topAnchor, left: view.leftAnchor,
-                         bottom: view.safeAreaLayoutGuide.topAnchor, right: view.rightAnchor)
+                        bottom: view.safeAreaLayoutGuide.topAnchor, right: view.rightAnchor)
         
-        configureButtonControls()
+        configureBottomControls()
         configureBarStackView()
     }
     
-    func configureBarStackView() {
-        view.addSubview(barStackView)
-        barStackView.anchor(top: view.topAnchor, left: view.leftAnchor, right: view.rightAnchor,
-                            paddingTop: 56, paddingLeft: 8, paddingRight: 8, height: 4)
+    func loadUserData() {
+        infoLabel.attributedText = viewModel.userDetailsAttributedString
+        professionLabel.text = viewModel.profession
+        bioLabel.text = viewModel.bio
     }
-        
-    func configureButtonControls() {
+    
+    func configureBottomControls() {
         let stack = UIStackView(arrangedSubviews: [dislikeButton, superlikeButton, likeButton])
         stack.distribution = .fillEqually
         
@@ -168,9 +172,13 @@ class ProfileController: UIViewController {
         stack.setDimensions(height: 80, width: 300)
         stack.centerX(inView: view)
         stack.anchor(bottom: view.safeAreaLayoutGuide.bottomAnchor, paddingBottom: 32)
-        
     }
-        
+    
+    func configureBarStackView() {
+        view.addSubview(barStackView)
+        barStackView.anchor(top: view.topAnchor, left: view.leftAnchor, right: view.rightAnchor, paddingTop: 56, paddingLeft: 8, paddingRight: 8, height: 4)
+    }
+    
     func createButton(withImage image: UIImage) -> UIButton {
         let button = UIButton(type: .system)
         button.setImage(image.withRenderingMode(.alwaysOriginal), for: .normal)
@@ -179,38 +187,31 @@ class ProfileController: UIViewController {
     }
 }
 
-// MARK: - UICollectionViewDataSource
-
+//MARK: - UICollectionViewDataSource
 extension ProfileController: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         return viewModel.imageCount
     }
     
-    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) ->
-    UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: reuseIdentifier,
-                                                      for: indexPath) as! ProfileCell
-        
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: reuseIdentifier, for: indexPath) as! ProfileCell
         cell.imageView.sd_setImage(with: viewModel.imageURLs[indexPath.row])
-        
         return cell
     }
+    
+    
 }
 
-// MARK: - UICollectionViewDelegate
-
+//MARK: - UICollectionViewDelegate
 extension ProfileController: UICollectionViewDelegate {
-    func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell,
-                        forItemAt indexPath: IndexPath) {
+    func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
         barStackView.setHighlighted(index: indexPath.row)
     }
 }
 
-// MARK: - UICollectionViewDelegateFlowLayout
-
+//MARK: - UICollectionViewDelegateFlowLayout
 extension ProfileController: UICollectionViewDelegateFlowLayout {
-    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout:
-                        UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
         return CGSize(width: view.frame.width, height: view.frame.width + 100)
     }
     
